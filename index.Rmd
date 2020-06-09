@@ -1,0 +1,107 @@
+```{r include=FALSE}
+dataPositivos = read.csv("positivos_covid.csv")
+dataFallecidos = read.csv("fallecidos_covid.csv")
+```
+
+#### COVID Y PUEBLOS INDÍGENAS:
+
+
+```{r include=FALSE}
+#Positivos:
+
+dataPositivos_Ucayali = dataPositivos[dataPositivos$DEPARTAMENTO == "UCAYALI",]
+dataPositivos_Amazonas = dataPositivos[dataPositivos$DEPARTAMENTO == "AMAZONAS",]
+```
+
+```{r include=FALSE}
+library(tidyverse)
+datat1 = dataPositivos_Ucayali %>% group_by(PROVINCIA, DISTRITO)  %>% summarise(count = n ())
+datat2 = dataPositivos_Amazonas %>% group_by(PROVINCIA, DISTRITO) %>% summarise(count = n())
+```
+
+
+
+```{r include=FALSE}
+#Fallecidos:
+
+dataFallecidos_Ucayali = dataFallecidos[dataFallecidos$DEPARTAMENTO == "UCAYALI",]
+dataFallecidos_Amazonas = dataFallecidos[dataFallecidos$DEPARTAMENTO == "AMAZONAS",]
+```
+
+```{r include=FALSE}
+datat1F = dataFallecidos_Ucayali %>% group_by(PROVINCIA, DISTRITO)  %>% summarise(count = n ())
+datat2F = dataFallecidos_Amazonas %>% group_by(PROVINCIA, DISTRITO)  %>% summarise(count = n ())
+```
+
+```{r include=FALSE}
+#Juntando Ucayali:
+
+colnames(datat1) = c("PROVINCIA","DISTRITO","POSITIVOS")
+colnames(datat1F) = c("PROVINCIA","DISTRITO","FALLECIDOS")
+
+datat1F = datat1F[,-c(1)]
+
+#Se exporta esto:
+dataUcayali = merge(datat1,datat1F, by = "DISTRITO", all.x = T)
+```
+
+
+```{r include=FALSE}
+#Juntando Amazonas:
+
+colnames(datat2) = c("PROVINCIA","DISTRITO","POSITIVOS")
+colnames(datat2F) = c("PROVINCIA","DISTRITO","FALLECIDOS")
+
+datat2F = datat2F[,-c(1)]
+
+dataAmazonas = merge(datat2, datat2F, by = "DISTRITO", all.x = T)
+```
+
+##### Distritos de Amazonas:
+
+```{r include=FALSE}
+#Mapa de Amazonas:
+
+folder='AMAZONAS'
+fileName='AMAZONAS.shp' # nivel 2 son provincias
+fileToRead=file.path(folder,fileName)
+
+library(rgdal)
+AmazonasDist <- rgdal::readOGR(fileToRead,stringsAsFactors=FALSE)
+```
+
+```{r include=FALSE}
+dataAmazonas$POSITIVOS = as.numeric(dataAmazonas$POSITIVOS)
+```
+
+```{r include=FALSE}
+dataAmazonas$PosOrd = factor(ifelse(dataAmazonas$POSITIVOS<10,1,
+                                ifelse(dataAmazonas$POSITIVOS>9 & dataAmazonas$POSITIVOS<26,2,
+                                       ifelse(dataAmazonas$POSITIVOS>25 & dataAmazonas$POSITIVOS<51,3,
+                                              ifelse(dataAmazonas$POSITIVOS>50 & dataAmazonas$POSITIVOS<101,4,
+                                                     ifelse(dataAmazonas$POSITIVOS>100,5,0))))))
+```
+
+```{r include=FALSE}
+AmazonasDist=merge(AmazonasDist,dataAmazonas,by="DISTRITO",all.x=TRUE)
+```
+
+```{r echo=FALSE,message=FALSE,warning=FALSE,eval=TRUE,fig.show='hold',fig.width=6.5,fig.height=7}
+library(unikn)
+
+paleta=usecol(pal_bordeaux) #colores
+plot(AmazonasDist,col='white',border="gray") 
+plot(AmazonasDist,
+     col=paleta[AmazonasDist$PosOrd],
+     border='NA',add=T)
+
+legend("bottomleft",
+       title='Casos positivos',
+       legend=c(paste0("Menos de 10 casos"),
+                paste0("Entre 10 y 25 casos"),
+                paste0("Entre 26 y 50 casos"),
+                paste0("Entre 51 y 100 casos"),
+                paste0("Más de 100 casos")
+                ),
+           fill=paleta,cex=0.8,bty = "n")
+```
