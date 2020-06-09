@@ -3,12 +3,10 @@ dataPositivos = read.csv("positivos_covid.csv")
 dataFallecidos = read.csv("fallecidos_covid.csv")
 ```
 
-#### COVID Y PUEBLOS INDÍGENAS:
-
+#### COVID - 19 Y PUEBLOS INDÍGENAS:
 
 ```{r include=FALSE}
 #Positivos:
-
 dataPositivos_Ucayali = dataPositivos[dataPositivos$DEPARTAMENTO == "UCAYALI",]
 dataPositivos_Amazonas = dataPositivos[dataPositivos$DEPARTAMENTO == "AMAZONAS",]
 ```
@@ -19,11 +17,8 @@ datat1 = dataPositivos_Ucayali %>% group_by(PROVINCIA, DISTRITO)  %>% summarise(
 datat2 = dataPositivos_Amazonas %>% group_by(PROVINCIA, DISTRITO) %>% summarise(count = n())
 ```
 
-
-
 ```{r include=FALSE}
 #Fallecidos:
-
 dataFallecidos_Ucayali = dataFallecidos[dataFallecidos$DEPARTAMENTO == "UCAYALI",]
 dataFallecidos_Amazonas = dataFallecidos[dataFallecidos$DEPARTAMENTO == "AMAZONAS",]
 ```
@@ -45,7 +40,6 @@ datat1F = datat1F[,-c(1)]
 dataUcayali = merge(datat1,datat1F, by = "DISTRITO", all.x = T)
 ```
 
-
 ```{r include=FALSE}
 #Juntando Amazonas:
 
@@ -55,6 +49,33 @@ colnames(datat2F) = c("PROVINCIA","DISTRITO","FALLECIDOS")
 datat2F = datat2F[,-c(1)]
 
 dataAmazonas = merge(datat2, datat2F, by = "DISTRITO", all.x = T)
+```
+
+```{r include=FALSE}
+#Pueblos indígenas por distrito de Amazonas:
+dataPPII = read.csv("PPII.csv")
+```
+
+```{r include=FALSE}
+dataPPII = dataPPII[,c(3,6)]
+colnames(dataPPII) = c("PUEBLO","DISTRITO")
+```
+
+```{r include=FALSE}
+datat3 = dataPPII %>% group_by(DISTRITO)  %>% summarise(count = n ())
+datat3 = as.data.frame(sapply(datat3, toupper)) 
+```
+
+```{r include=FALSE}
+colnames(datat3) = c("DISTRITO","COMUNIDADES")
+```
+
+```{r include=FALSE}
+datat3 = read.csv("ComAmazonas.csv")
+```
+
+```{r include=FALSE}
+dataAmazonas = merge(dataAmazonas, datat3, by="DISTRITO", all.x = T, all.y = T)
 ```
 
 ##### Distritos de Amazonas:
@@ -70,9 +91,6 @@ library(rgdal)
 AmazonasDist <- rgdal::readOGR(fileToRead,stringsAsFactors=FALSE)
 ```
 
-```{r include=FALSE}
-dataAmazonas$POSITIVOS = as.numeric(dataAmazonas$POSITIVOS)
-```
 
 ```{r include=FALSE}
 dataAmazonas$PosOrd = factor(ifelse(dataAmazonas$POSITIVOS<10,1,
@@ -83,10 +101,22 @@ dataAmazonas$PosOrd = factor(ifelse(dataAmazonas$POSITIVOS<10,1,
 ```
 
 ```{r include=FALSE}
+dataAmazonas$ComOrd = factor(ifelse(dataAmazonas$COMUNIDADES<5,1,
+                                ifelse(dataAmazonas$COMUNIDADES>6 & dataAmazonas$COMUNIDADES<16,2,
+                                       ifelse(dataAmazonas$COMUNIDADES>15 & dataAmazonas$COMUNIDADES<26,3,
+                                              ifelse(dataAmazonas$COMUNIDADES>25 & dataAmazonas$COMUNIDADES<100,4,
+                                                     ifelse(dataAmazonas$COMUNIDADES>99,5,0))))))
+```
+
+```{r include=FALSE}
 AmazonasDist=merge(AmazonasDist,dataAmazonas,by="DISTRITO",all.x=TRUE)
 ```
 
-```{r echo=FALSE,message=FALSE,warning=FALSE,eval=TRUE,fig.show='hold',fig.width=6.5,fig.height=7}
+```{r echo=FALSE,message=FALSE,warning=FALSE,eval=TRUE,fig.show='hold',fig.width=12,fig.height=8}
+library(maps)
+
+par(mfrow=c(1, 2))
+
 library(unikn)
 
 paleta=usecol(pal_bordeaux) #colores
@@ -96,7 +126,7 @@ plot(AmazonasDist,
      border='NA',add=T)
 
 legend("bottomleft",
-       title='Casos positivos',
+       title='Casos positivos:',
        legend=c(paste0("Menos de 10 casos"),
                 paste0("Entre 10 y 25 casos"),
                 paste0("Entre 26 y 50 casos"),
@@ -104,4 +134,23 @@ legend("bottomleft",
                 paste0("Más de 100 casos")
                 ),
            fill=paleta,cex=0.8,bty = "n")
+
+paleta=usecol(pal_bordeaux) #colores
+plot(AmazonasDist,col='white',border="gray") 
+plot(AmazonasDist,
+     col=paleta[AmazonasDist$ComOrd],
+     border='NA',add=T)
+
+legend("bottomleft",
+       title='Número de comunidades:',
+       legend=c(paste0("Menos de 5 comunidades"),
+                paste0("Entre 15 y 15 comunidades"),
+                paste0("Entre 16 y 25 comunidades"),
+                paste0("Entre 26 y 99 comunidades"),
+                paste0("100 o más comunidades")
+                ),
+           fill=paleta,cex=0.8,bty = "n")
+
 ```
+
+
